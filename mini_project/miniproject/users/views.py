@@ -1,20 +1,45 @@
-
-
-from rest_framework import generics
-
-from rest_framework.permissions import AllowAny
-from rest_framework_simplejwt.views import TokenObtainPairView
+from django.contrib.auth import login, authenticate, logout
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect
+from django.contrib import messages
 
 
 from .models import User
-from .serializers import RegisterSerializer, LoginSerializer
 
 
-class RegisterView(generics.CreateAPIView):
-    queryset = User.objects.all()
-    serializer_class = RegisterSerializer
-    permission_classes = [AllowAny]
+def register(request):
+    if request.method == 'POST':
+        username = request.POST['username']
+        password = request.POST['password']
+        role = request.POST['role']
+
+        user = User.objects.create_user(username=username, password=password, role=role)
+        login(request, user)
+        return redirect('profile')
+
+    return render(request, 'users/register.html')
 
 
-class LoginView(TokenObtainPairView):
-    serializer_class = LoginSerializer
+def user_login(request):
+    if request.method == 'POST':
+        username = request.POST['username']
+        password = request.POST['password']
+        user = authenticate(request, username=username, password=password)
+
+        if user:
+            login(request, user)
+            return redirect('profile')
+        else:
+            messages.error(request, "Invalid credentials")
+
+    return render(request, 'users/login.html')
+
+
+@login_required
+def profile(request):
+    return render(request, 'users/profile.html', {'user': request.user})
+
+
+def user_logout(request):
+    logout(request)
+    return redirect('login')
